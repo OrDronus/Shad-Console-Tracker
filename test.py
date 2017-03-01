@@ -23,4 +23,11 @@ table = [["Name", "Quantity", "Stuff"],
         ["Nicolas Cage", "56", "idunno"],
         ["Arthur", "57", "yeah, stuff"]]
 
-printTable(table, 3)
+printTable(table, 4)
+
+table = []
+
+table.extend([["Bob", "John", "Kelsy"],
+            ["", "", ""]])
+table.append(["3", "4", "5"])
+printTable(table, 4)

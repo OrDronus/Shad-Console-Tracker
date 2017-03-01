@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 
+# Комментарий на русском для проверки
 from datetime import datetime
 import locale
 import os
@@ -63,7 +64,7 @@ def loadRuns(fname):
         wins = int(data[2])
         gold = int(data[3])
         res.append(ArenaRun(date, craft, wins, gold))
-    fd.close()  # РџРѕС‡С‚РёС‚Р°С‚СЊ РЅСѓР¶РЅРѕ Р»Рё РІ СЏРІРЅРѕРј РІРёРґРµ Р·Р°РєСЂС‹РІР°С‚СЊ С„Р°Р№Р»С‹
+    fd.close()
     return res
 
 def saveRuns(fname, arenaRuns):
@@ -109,22 +110,63 @@ def calcStats():
         stats["runs"][run.craft.val] += 1
         totalWins[run.craft.val] += run.wins
         totalGold[run.craft.val] += run.gold
-        print("type: {}, val: {}".format(run.wins.__class__, run.wins))
+        # print("type: {}, val: {}".format(run.wins.__class__, run.wins))
     for i in range(8):
         if stats["runs"][i] == 0:
             continue
-        stats["winrate"][i] = float(totalWins[i])/float(stats["runs"][i]*5)
-        stats["avgwins"][i] = float(totalWins[i])/float(stats["runs"][i])
-        stats["avggold"][i] = float(totalGold[i])/float(stats["runs"][i])
-        print("i: {}, wins: {}, runs: {}, avg: {}".format(i, totalWins[i], stats["runs"][i], stats["avgwins"][i]))
+        stats["winrate"][i] = totalWins[i]/(stats["runs"][i]*5)
+        stats["avgwins"][i] = totalWins[i]/stats["runs"][i]
+        stats["avggold"][i] = totalGold[i]/stats["runs"][i]
+        # print("i: {}, wins: {}, runs: {}, avg: {}".format(i, totalWins[i], stats["runs"][i], stats["avgwins"][i]))
     return stats
+
+def printTable(table, space):
+    rows = len(table)
+    if rows == 0:
+        return
+    cols = len(table[0])
+    maxColWidth = [0] * cols
+    for i in range(rows):
+        for j in range(cols):
+            if len(table[i][j]) > maxColWidth[j]:
+                maxColWidth[j] = len(table[i][j])
+    for i in range(rows):
+        for j in range(cols):
+            pad = maxColWidth[j] - len(table[i][j]) + space
+            print(table[i][j] + " " * pad, end="")
+        print()
 
 def printStats():
     stats = calcStats()
-    for run in arenaRuns:
-        print(run)
-    print("\tAvg Gold\tWin Rate\tAvg Wins\n")
-    print("Total\t{:.2f}\t\t{:.2%}\t\t{:.2f}".format(stats["avggold"][Craft.all], stats["winrate"][Craft.all], stats["avgwins"][Craft.all]))
+    table = []
+    table.extend([["Craft", "Avg Wins", "Winrate", "Avg Gold", "Runs"],
+                ["", "", "", "", ""]])
+    table.extend([[Craft.toStr(Craft.all), "{:.2f}".format(stats["avgwins"][Craft.all]),
+                "{:.2%}".format(stats["winrate"][Craft.all]),
+                "{:.2f}".format(stats["avggold"][Craft.all]),
+                str(stats["runs"][Craft.all])],
+                ["", "", "", "", ""]])
+    for i in range(7):
+        if stats["runs"][i] == 0:
+            continue
+        table.append([Craft.toStr(i), "{:.2f}".format(stats["avgwins"][i]),
+                    "{:.2%}".format(stats["winrate"][i]),
+                    "{:.2f}".format(stats["avggold"][i]),
+                    str(stats["runs"][i])])
+    printTable(table, 4)
+
+def clearScreen():
+    try:
+        os.system("cls")
+    except:
+        os.system("clear")
+
+# def printStats():
+#     stats = calcStats()
+#     for run in arenaRuns:
+#         print(run)
+#     print("\tAvg Gold\tWin Rate\tAvg Wins\n")
+#     print("Total\t{:.2f}\t\t{:.2%}\t\t{:.2f}".format(stats["avggold"][Craft.all], stats["winrate"][Craft.all], stats["avgwins"][Craft.all]))
 
 locale.setlocale(locale.LC_ALL, '')
 print("Date format: " + str(datetime.today().strftime("%x")))
@@ -132,18 +174,18 @@ commands = {"new": addNewArenaRun}
 
 arenaRuns = loadRuns("data")
 while True:
-    try:
-        os.system("cls")
-    except:
-        os.system("clear")
+    clearScreen()
     printStats()
-    inputline = raw_input(">").split()
-    command = inputline.pop(0).lower()
-    if command == "q" or command == "quit":
-        break
+    print()
     try:
+        inputline = input(">").split()
+        command = inputline.pop(0).lower()
+        if command == "q" or command == "quit":
+            break
         commands[command](inputline)
     except KeyError:
-        raw_input("No such command")
+        input("No such command")
+    except IndexError:
+        pass
 
 # saveStats("data", arenaRuns)
