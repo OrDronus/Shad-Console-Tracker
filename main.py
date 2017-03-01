@@ -30,7 +30,7 @@ class Craft:
             else:
                 raise ValueError("Invalid craft name")
         else:
-            if craft > 7:
+            if craft > 6:
                 raise ValueError("Ivalid craft value")
             self.val = craft
 
@@ -58,9 +58,11 @@ def loadRuns(fname):
     fd = open(fname, "r")
     for line in fd:
         data = line.split()
+        if len(data) == 0:
+            continue
         # 0-date, 1-craft, 2-wins, 3-gold
         date = datetime.strptime(data[0], "%d.%m.%Y")
-        craft = Craft(int(data[1]))
+        craft = Craft(data[1])
         wins = int(data[2])
         gold = int(data[3])
         res.append(ArenaRun(date, craft, wins, gold))
@@ -70,13 +72,13 @@ def loadRuns(fname):
 def saveRuns(fname, arenaRuns):
     fd = open(fname, "w")
     for run in arenaRuns:
-        fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft.val) +\
+        fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft) +\
         " " + str(run.wins) + " " + str(run.gold) + "\n")
     fd.close()
 
 def saveRun(fname, run):
     fd = open(fname, "a")
-    fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft.val) +\
+    fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft) +\
     " " + str(run.wins) + " " + str(run.gold) + "\n")
     fd.close()
 
@@ -113,10 +115,13 @@ def calcStats():
         # print("type: {}, val: {}".format(run.wins.__class__, run.wins))
     for i in range(8):
         if stats["runs"][i] == 0:
-            continue
-        stats["winrate"][i] = totalWins[i]/(stats["runs"][i]*5)
-        stats["avgwins"][i] = totalWins[i]/stats["runs"][i]
-        stats["avggold"][i] = totalGold[i]/stats["runs"][i]
+            stats["winrate"][i] = 0
+            stats["avgwins"][i] = 0
+            stats["avggold"][i] = 0
+        else:
+            stats["winrate"][i] = totalWins[i]/(stats["runs"][i]*5)
+            stats["avgwins"][i] = totalWins[i]/stats["runs"][i]
+            stats["avggold"][i] = totalGold[i]/stats["runs"][i]
         # print("i: {}, wins: {}, runs: {}, avg: {}".format(i, totalWins[i], stats["runs"][i], stats["avgwins"][i]))
     return stats
 
@@ -160,13 +165,6 @@ def clearScreen():
         os.system("cls")
     except:
         os.system("clear")
-
-# def printStats():
-#     stats = calcStats()
-#     for run in arenaRuns:
-#         print(run)
-#     print("\tAvg Gold\tWin Rate\tAvg Wins\n")
-#     print("Total\t{:.2f}\t\t{:.2%}\t\t{:.2f}".format(stats["avggold"][Craft.all], stats["winrate"][Craft.all], stats["avgwins"][Craft.all]))
 
 locale.setlocale(locale.LC_ALL, '')
 print("Date format: " + str(datetime.today().strftime("%x")))
