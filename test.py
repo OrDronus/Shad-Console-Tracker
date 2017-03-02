@@ -1,33 +1,24 @@
 from datetime import datetime
 import locale
+import tkinter
 
-def printTable(table, space):
-    rows = len(table)
-    if rows == 0:
-        return
-    cols = len(table[0])
-    maxColWidth = [0] * cols
-    for i in range(rows):
-        for j in range(cols):
-            if len(table[i][j]) > maxColWidth[j]:
-                maxColWidth[j] = len(table[i][j])
-    for i in range(rows):
-        for j in range(cols):
-            pad = maxColWidth[j] - len(table[i][j]) + space
-            print(table[i][j] + " " * pad, end="")
-        print()
+class ArenaStats:
 
-table = [["Name", "Quantity", "Stuff"],
-        ["", "", ""],
-        ["Bob", "30", "Abracadabra"],
-        ["Nicolas Cage", "56", "idunno"],
-        ["Arthur", "57", "yeah, stuff"]]
+    def __init__(self):
+        self.runs = 0
+        self.totalWins = 0
+        self.avgWins = 0
+        self.winrate = 0
+        self.avgGold = 0
+        self.totalGold = 0
 
-printTable(table, 4)
+arr = []
 
-table = []
+for i in range(8):
+    arr.append(ArenaStats())
 
-table.extend([["Bob", "John", "Kelsy"],
-            ["", "", ""]])
-table.append(["3", "4", "5"])
-printTable(table, 4)
+stats = arr[3]
+
+stats.runs = 5
+
+print(arr[3].runs)

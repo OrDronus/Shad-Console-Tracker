@@ -97,33 +97,36 @@ def addNewArenaRun(data):
     saveRun("data", newRun)
     arenaRuns.append(newRun)
 
+class ArenaStats:
+
+    def __init__(self):
+        self.runs = 0
+        self.totalWins = 0
+        self.avgWins = 0
+        self.winrate = 0
+        self.avgGold = 0
+        self.totalGold = 0
+
 def calcStats():
-    stats = {"runs": {}, "avgwins": {}, "winrate": {}, "avggold": {}}
-    stats["runs"] = {Craft.all: 0, Craft.forest: 0, Craft.sword: 0, Craft.rune: 0, Craft.dragon: 0,
-                    Craft.shadow: 0, Craft.blood: 0, Craft.haven: 0}
-    totalWins = {Craft.all: 0, Craft.forest: 0, Craft.sword: 0, Craft.rune: 0, Craft.dragon: 0,
-                    Craft.shadow: 0, Craft.blood: 0, Craft.haven: 0}
-    totalGold = {Craft.all: 0, Craft.forest: 0, Craft.sword: 0, Craft.rune: 0, Craft.dragon: 0,
-                    Craft.shadow: 0, Craft.blood: 0, Craft.haven: 0}
-    for run in arenaRuns:
-        stats["runs"][Craft.all] += 1
-        totalWins[Craft.all] += run.wins
-        totalGold[Craft.all] += run.gold
-        stats["runs"][run.craft.val] += 1
-        totalWins[run.craft.val] += run.wins
-        totalGold[run.craft.val] += run.gold
-        # print("type: {}, val: {}".format(run.wins.__class__, run.wins))
+    statsArray = []
     for i in range(8):
-        if stats["runs"][i] == 0:
-            stats["winrate"][i] = 0
-            stats["avgwins"][i] = 0
-            stats["avggold"][i] = 0
-        else:
-            stats["winrate"][i] = totalWins[i]/(stats["runs"][i]*5)
-            stats["avgwins"][i] = totalWins[i]/stats["runs"][i]
-            stats["avggold"][i] = totalGold[i]/stats["runs"][i]
-        # print("i: {}, wins: {}, runs: {}, avg: {}".format(i, totalWins[i], stats["runs"][i], stats["avgwins"][i]))
-    return stats
+        statsArray.append(ArenaStats())
+    for run in arenaRuns:
+        statsArray[7].runs += 1
+        statsArray[7].totalWins += run.wins
+        statsArray[7].totalGold += run.gold
+        statsArray[run.craft.val].runs += 1
+        statsArray[run.craft.val].totalWins += run.wins
+        statsArray[run.craft.val].totalGold += run.gold
+
+    for stats in statsArray:
+        if stats.runs == 0:
+            continue
+        stats.winrate = stats.totalWins/(stats.runs*5)
+        stats.avgWins = stats.totalWins/stats.runs
+        stats.avgGold = stats.totalGold/stats.runs
+
+    return statsArray
 
 def printTable(table, space):
     rows = len(table)
@@ -142,22 +145,24 @@ def printTable(table, space):
         print()
 
 def printStats():
-    stats = calcStats()
+    statsArray = calcStats()
     table = []
     table.extend([["Craft", "Avg Wins", "Winrate", "Avg Gold", "Runs"],
                 ["", "", "", "", ""]])
-    table.extend([[Craft.toStr(Craft.all), "{:.2f}".format(stats["avgwins"][Craft.all]),
-                "{:.2%}".format(stats["winrate"][Craft.all]),
-                "{:.2f}".format(stats["avggold"][Craft.all]),
-                str(stats["runs"][Craft.all])],
+    statsAll = statsArray[Craft.all]
+    table.extend([[Craft.toStr(Craft.all), "{:.2f}".format(statsAll.avgWins),
+                "{:.2%}".format(statsAll.winrate),
+                "{:.2f}".format(statsAll.avgGold),
+                str(statsAll.runs)],
                 ["", "", "", "", ""]])
     for i in range(7):
-        if stats["runs"][i] == 0:
+        stats = statsArray[i]
+        if stats.runs == 0:
             continue
-        table.append([Craft.toStr(i), "{:.2f}".format(stats["avgwins"][i]),
-                    "{:.2%}".format(stats["winrate"][i]),
-                    "{:.2f}".format(stats["avggold"][i]),
-                    str(stats["runs"][i])])
+        table.append([Craft.toStr(i), "{:.2f}".format(stats.avgWins),
+                    "{:.2%}".format(stats.winrate),
+                    "{:.2f}".format(stats.avgGold),
+                    str(stats.runs)])
     printTable(table, 4)
 
 def clearScreen():
@@ -167,7 +172,6 @@ def clearScreen():
         os.system("clear")
 
 locale.setlocale(locale.LC_ALL, '')
-print("Date format: " + str(datetime.today().strftime("%x")))
 commands = {"new": addNewArenaRun}
 
 arenaRuns = loadRuns("data")
