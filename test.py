@@ -12,13 +12,9 @@ class ArenaStats:
         self.avgGold = 0
         self.totalGold = 0
 
-arr = []
+string = ("This "
+        "is "
+        "multi "
+        "line")
 
-for i in range(8):
-    arr.append(ArenaStats())
-
-stats = arr[3]
-
-stats.runs = 5
-
-print(arr[3].runs)
+print(string)

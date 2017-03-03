@@ -28,10 +28,10 @@ class Craft:
             elif craft == "havencraft" or craft == "haven":
                 self.val = Craft.haven
             else:
-                raise ValueError("Invalid craft name")
+                raise ValueError("invalid craft name: {}".format(craft))
         else:
             if craft > 6:
-                raise ValueError("Ivalid craft value")
+                raise ValueError("invalid craft value: {}".format(craft))
             self.val = craft
 
     @staticmethod
@@ -53,20 +53,40 @@ class ArenaRun:
     def __str__(self):
         return self.date.strftime("%x") + " " + str(self.craft) + " " + str(self.wins) + " " + str(self.gold)
 
+class UserError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def show(self):
+        print(self.message)
+        input("Press any key to continue")
+
+class InvalidFileDataError(UserError):
+    def __init__(self, filename, datatype):
+        self.file = filename
+        self.data = datatype
+
 def loadRuns(fname):
     res = []
-    fd = open(fname, "r")
-    for line in fd:
-        data = line.split()
-        if len(data) == 0:
-            continue
-        # 0-date, 1-craft, 2-wins, 3-gold
-        date = datetime.strptime(data[0], "%d.%m.%Y")
-        craft = Craft(data[1])
-        wins = int(data[2])
-        gold = int(data[3])
-        res.append(ArenaRun(date, craft, wins, gold))
-    fd.close()
+    # Возможные исключения: FileNotFoundError, ValueError
+    try:
+        fd = open(fname, "r")
+        for line in fd:
+            data = line.split()
+            if len(data) == 0:
+                continue
+            # 0-date, 1-craft, 2-wins, 3-gold
+            date = datetime.strptime(data[0], "%d.%m.%Y")
+            craft = Craft(data[1])
+            wins = int(data[2])
+            gold = int(data[3])
+            res.append(ArenaRun(date, craft, wins, gold))
+        fd.close()
+    except ValueError:
+        raise UserError("\"{}\" file, that contains arena runs, has"
+        " Invalid data, check it's contents or delete it.".format(fname))
+    except FileNotFoundError:
+        pass    # File will be created, when saving new arena run
     return res
 
 def saveRuns(fname, arenaRuns):
@@ -85,17 +105,22 @@ def saveRun(fname, run):
 def addNewArenaRun(data):
     # [[date], craft, wins, gold], used as stack, because amount of params can differ
     try:
-        date = datetime.strptime(data[0], "%x")
-        data.remove(0)
-    except ValueError:
-        date = datetime.today()
-    craft = Craft(data.pop(0))
-    wins = int(data.pop(0))
-    gold = int(data.pop(0))
+        try:
+            date = datetime.strptime(data[0], "%x")
+            data.pop(0)
+        except ValueError:
+            date = datetime.today()
+        craft = Craft(data.pop(0))
+        wins = int(data.pop(0))
+        gold = int(data.pop(0))
 
-    newRun = ArenaRun(date, craft, wins, gold)
-    saveRun("data", newRun)
-    arenaRuns.append(newRun)
+        newRun = ArenaRun(date, craft, wins, gold)
+        saveRun("data", newRun)
+        arenaRuns.append(newRun)
+    except IndexError:
+        raise UserError("Not enough command parameters")
+    except ValueError as err:
+        raise UserError("Invalid command parameters: \"{}\"".format(err))
 
 class ArenaStats:
 
@@ -172,22 +197,32 @@ def clearScreen():
         os.system("clear")
 
 locale.setlocale(locale.LC_ALL, '')
-commands = {"new": addNewArenaRun}
+commands = {"arena": addNewArenaRun}
 
-arenaRuns = loadRuns("data")
+try:
+    arenaRuns = loadRuns("data")
+except UserError as err:
+    err.show()
+
 while True:
     clearScreen()
     printStats()
     print()
     try:
         inputline = input(">").split()
-        command = inputline.pop(0).lower()
-        if command == "q" or command == "quit":
+        cname = inputline.pop(0).lower()
+        if cname == "q" or cname == "quit":
             break
-        commands[command](inputline)
+        command = commands[cname]
     except KeyError:
-        input("No such command")
+        input("No such command\nPress any key to continue")
     except IndexError:
         pass
+    else:
+        try:
+            command(inputline)
+        except UserError as err:
+            err.show()
+
 
 # saveStats("data", arenaRuns)
