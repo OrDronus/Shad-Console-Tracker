@@ -61,27 +61,26 @@ class UserError(Exception):
         print(self.message)
         input("Press any key to continue")
 
-class InvalidFileDataError(UserError):
-    def __init__(self, filename, datatype):
-        self.file = filename
-        self.data = datatype
+# class InvalidFileDataError(UserError):
+#     def __init__(self, filename, datatype):
+#         self.file = filename
+#         self.data = datatype
 
 def loadRuns(fname):
     res = []
     # Возможные исключения: FileNotFoundError, ValueError
     try:
-        fd = open(fname, "r")
-        for line in fd:
-            data = line.split()
-            if len(data) == 0:
-                continue
-            # 0-date, 1-craft, 2-wins, 3-gold
-            date = datetime.strptime(data[0], "%d.%m.%Y")
-            craft = Craft(data[1])
-            wins = int(data[2])
-            gold = int(data[3])
-            res.append(ArenaRun(date, craft, wins, gold))
-        fd.close()
+        with open(fname, "r") as fd:
+            for line in fd:
+                data = line.split()
+                if len(data) == 0:
+                    continue
+                # 0-date, 1-craft, 2-wins, 3-gold
+                date = datetime.strptime(data[0], "%d.%m.%Y")
+                craft = Craft(data[1])
+                wins = int(data[2])
+                gold = int(data[3])
+                res.append(ArenaRun(date, craft, wins, gold))
     except ValueError:
         raise UserError("\"{}\" file, that contains arena runs, has"
         " Invalid data, check it's contents or delete it.".format(fname))
@@ -90,17 +89,15 @@ def loadRuns(fname):
     return res
 
 def saveRuns(fname, arenaRuns):
-    fd = open(fname, "w")
-    for run in arenaRuns:
-        fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft) +\
-        " " + str(run.wins) + " " + str(run.gold) + "\n")
-    fd.close()
+    with open(fname, "w") as fd:
+        for run in arenaRuns:
+            fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft) +\
+            " " + str(run.wins) + " " + str(run.gold) + "\n")
 
 def saveRun(fname, run):
-    fd = open(fname, "a")
-    fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft) +\
-    " " + str(run.wins) + " " + str(run.gold) + "\n")
-    fd.close()
+    with open(fname, "a") as fd:
+        fd.write(run.date.strftime("%d.%m.%Y") + " " + str(run.craft) +\
+        " " + str(run.wins) + " " + str(run.gold) + "\n")
 
 def addNewArenaRun(data):
     # [[date], craft, wins, gold], used as stack, because amount of params can differ
@@ -121,6 +118,8 @@ def addNewArenaRun(data):
         raise UserError("Not enough command parameters")
     except ValueError as err:
         raise UserError("Invalid command parameters: \"{}\"".format(err))
+    except OSError as err:
+        raise UserError("Could not save new arena run: \"{}\"".format(err))
 
 class ArenaStats:
 
