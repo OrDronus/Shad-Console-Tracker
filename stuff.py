@@ -92,6 +92,12 @@ for thing in lst[:3]:
     print(thing, " ", end="")
 date = None
 print("{}".format(date.strftime("%d.%m.%Y") if date else "n"))
+date1 = datetime(2017, 4, 4)
+date2 = datetime(2017, 8, 4)
+print(date1 < date2)
+
+val1, val2 = [(3,4), (5,6), (7,8)][1]
+print(val1, val2)
 
 # class Craft:
 #     _forest = {"val": 0, "name": "Forestcraft"}

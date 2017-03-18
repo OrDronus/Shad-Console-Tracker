@@ -133,7 +133,7 @@ class UserError(Exception):
 
 class Printer:
     stats, list = range(2)  # What to show
-    arena, decks, games, onedeck = range(4)  # Types of data
+    arena, decks, games, onedeck, help = range(5)  # Types of data
     ranked, unranked, both = range(3)   # When showing games
     none, winrate, played = range(3)    # When showing stats
 
@@ -150,8 +150,18 @@ class Printer:
         self.minDate = None
         self.sort = Printer.none
 
+    def rangeStr(self, anyway="True"):
+        if self.minDate or self.maxDate:
+            return "Range: {} {}".format(
+                "from " + self.minDate.strftime("%x") if self.minDate else "",
+                "to " + self.maxDate.strftime("%x") if self.maxDate else "")
+        elif anyway:
+            return "Range: all"
+        else:
+            return ""
+
     def printArenaStats(self):
-        print("Arena Stats\n")
+        print("Arena Stats\t{}\n".format(self.rangeStr(False)))
         if not self.tracker.arenaRuns:
             print("You haven't completed any arena runs")
             return
@@ -176,61 +186,87 @@ class Printer:
 
     def printGamesStats(self):
         if self.data == Printer.decks:
-            print("Deck List\n")
+            print("Deck List", end="")
             if not self.tracker.decks:
                 print("You don't have any decks yet")
                 return
         else:
-            print("Games Stats\n")
+            print("{} Games Stats".format({Printer.ranked: "Ranked",
+                Printer.unranked: "Unranked", Printer.both: "Total"}[self.games]),
+                end="")
             if not self.tracker.games:
                 print("You haven't played any games yet")
                 return
-
+        print("\t{}\n".format(self.rangeStr(False)))
+        printed = False
         table = []
         table.extend([["Name", "Craft", "Winrate", "Runs"],
                     ["", "", "", ""]])
         for deck in self.sortedDecks:
-            if self.data != Printer.decks and deck.uRuns + deck.rRuns == 0:
+            runs, winrate = {Printer.ranked: (deck.rRuns, deck.rWinrate),
+                Printer.unranked: (deck.uRuns, deck.uWinrate),
+                Printer.both: (deck.rRuns + deck.uRuns, deck.tWinrate)}[self.games]
+            if self.data != Printer.decks and runs == 0:
                 continue
-            table.append([deck.name, str(deck.craft), "{:.2%}".format(deck.tWinrate),
-                        str(deck.rRuns + deck.uRuns)])
-        printTable(table, 4)
+            table.append([deck.name, str(deck.craft), "{:.2%}".format(winrate),
+                str(runs)])
+            printed = True
+        if printed:
+            printTable(table, 4)
+        else:
+            print("There are no games, matching your parameters")
 
     def printOneDeckStats(self):
         if not self.deck:
             print("You don't have any deck selcted")
             return
-        print("Name: {} Craft: {}\n".format(self.deck.name, self.deck.craft))
+        print("Name: {}\nCraft: {}\n".format(self.deck.name, self.deck.craft))
         table = [["", "Unranked", "Ranked", "Total"],
                     ["Runs", str(self.deck.uRuns), str(self.deck.rRuns),
                         str(self.deck.uRuns + self.deck.rRuns)],
-                    ["Winrate", "{:2%}".format(self.deck.uWinrate),
-                        "{:2%}".format(self.deck.rWinrate), "{:2%}".format(self.deck.tWinrate)]]
+                    ["Winrate", "{:.2%}".format(self.deck.uWinrate),
+                        "{:.2%}".format(self.deck.rWinrate), "{:.2%}".format(self.deck.tWinrate)]]
         printTable(table, 4)
 
     def printArenaList(self):
-        print("Arenas List\n")
+        print("Arenas List\t{}\n".format(self.rangeStr(False)))
         if not self.tracker.arenaRuns:
             print("You haven't completed any arena runs")
             return
+        printed = False
         for arena in self.tracker.arenaRuns:
+            if self.minDate and arena.date < self.minDate or\
+               self.maxDate and arena.date > self.maxDate:
+               continue
             print(arena)
+            printed = True
+        if not printed:
+            print("There are no arena runs, matching your parameters")
 
     def printGamesList(self):
-        print("Games List\n")
+        print("Games List\t{}\n".format(self.rangeStr(False)))
         if not self.tracker.games:
             print("You haven't played any games")
             return
+        printed = False
         for game in self.tracker.games:
-            if self.games == Printer.both:
+            if not (self.minDate and game.date < self.minDate or\
+                self.maxDate and game.date > self.maxDate) and\
+                (self.games == Printer.both or\
+                self.games == Printer.ranked and game.ranked or\
+                self.games == Printer.unranked and not game.ranked):
                 print(game)
-            elif self.games == Printer.ranked and game.ranked:
-                print(game)
-            elif self.games == Printer.unranked and not game.ranked:
-                print(game)
+                printed = True
+        if not printed:
+            print("There are no games, matching your parameters")
+
+    def printHelp(self):
+        print("This is help message, is it helpful?")
 
     def printStuff(self):
-        if self.data == Printer.decks:
+        if self.data == Printer.help:
+            self.printHelp()
+        elif self.data == Printer.decks:
             self.printGamesStats()
         elif self.data == Printer.arena:
             if self.show == Printer.list: self.printArenaList()
@@ -279,15 +315,16 @@ class DeckTracker:
         self.arenaRuns = []
         self.arenaStats = []
         self.loadRuns()
-        self.calcArenaStats()
         self.decks = []
         self.loadDecks()
         self.games = []
         self.loadGames()
-        self.calcGamesStats()
+
 
         self.printer = Printer(self)
         self.loadConf()
+        self.calcArenaStats()
+        self.calcGamesStats()
         self.printer.sortArenaStats()
         self.printer.sortGamesStats()
 
@@ -537,6 +574,9 @@ class DeckTracker:
         for i in range(8):
             self.arenaStats.append(ArenaStats(i))
         for run in self.arenaRuns:
+            if self.printer.minDate and run.date < self.printer.minDate or\
+               self.printer.maxDate and run.date > self.printer.maxDate:
+               continue
             self.arenaStats[7].runs += 1
             self.arenaStats[7].totalWins += run.wins
             self.arenaStats[7].totalGold += run.gold
@@ -554,6 +594,9 @@ class DeckTracker:
         for deck in self.decks:
             deck.resetStats()
         for game in self.games:
+            if self.printer.minDate and game.date < self.printer.minDate or\
+               self.printer.maxDate and game.date > self.printer.maxDate:
+               continue
             if game.ranked:
                 game.deck.rRuns += 1
                 if game.win:
@@ -599,6 +642,8 @@ class DeckTracker:
                     self.printer.data = Printer.games
                 elif param == "decks":
                     self.printer.data = Printer.decks
+                elif param == "help":
+                    self.printer.data = Printer.help
                 elif param == "stats":
                     self.printer.show = Printer.stats
                 elif param == "list":
@@ -614,7 +659,7 @@ class DeckTracker:
                     self.printer.sortGamesStats()
                 else:
                     raise UserError("Unknown parameter: {}".format(param))
-            self.saveConf()
+        self.saveConf()
 
     def sortCommand(self, params):
         try:
@@ -627,9 +672,38 @@ class DeckTracker:
         except KeyError as err:
             raise UserError("Unknown parameter: {}".format(err))
 
+    def rangeCommand(self, params):
+        try:
+            data = params.lower().split()
+            if data[0] == "all":
+                minDate = None
+                maxDate = None
+            else:
+                minDate = None if data[0] == "n" or data[0] == "none"\
+                    else datetime.strptime(data[0], "%x")
+                maxDate = None if data[1] == "n" or data[1] == "none"\
+                    else datetime.strptime(data[1], "%x")
+            if minDate and maxDate and minDate > maxDate:
+                raise UserError("Minimum date shoud be later, than maximum date")
+            self.printer.minDate = minDate
+            self.printer.maxDate = maxDate
+            self.calcArenaStats()
+            self.calcGamesStats()
+            self.printer.sortArenaStats()
+            self.printer.sortGamesStats()
+            self.saveConf()
+        except ValueError as err:
+            raise UserError("Incorrect date format: {}".format(err))
+        except IndexError:
+            raise UserError("Not enough command parameters")
+
+    def helpCommand(self, params):
+        self.printer.data = Printer.help
+
     def run(self):
         commands = {"new": self.newCommand, "delete": self.deleteCommand,
-                    "show": self.showCommand, "sort": self.sortCommand}
+                    "show": self.showCommand, "sort": self.sortCommand,
+                    "range": self.rangeCommand, "help": self.helpCommand}
         while True:
             clearScreen()
             self.printer.printStuff()
